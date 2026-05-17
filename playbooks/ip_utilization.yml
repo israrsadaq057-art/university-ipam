@@ -1,0 +1,48 @@
+---
+- name: IP UTILIZATION REPORT
+  hosts: localhost
+  vars:
+    departments:
+      - { name: "Admin", subnet: "10.1.1.0/24", used: 45, total: 254 }
+      - { name: "IT", subnet: "10.1.2.0/24", used: 32, total: 254 }
+      - { name: "CS", subnet: "10.2.1.0/24", used: 180, total: 254 }
+      - { name: "Physics", subnet: "10.3.1.0/24", used: 67, total: 254 }
+      - { name: "Hostel A", subnet: "10.4.1.0/23", used: 412, total: 510 }
+  tasks:
+    - name: Calculate utilization percentage
+      set_fact:
+        utilization_data: "{{ utilization_data | default([]) + [{'name': item.name, 'subnet': item.subnet, 'used': item.used, 'total': item.total, 'percentage': (item.used / item.total * 100) | round(2)}] }}"
+      loop: "{{ departments }}"
+
+    - name: Display utilization
+      debug:
+        msg: |
+          {{ item.name }}: {{ item.used }}/{{ item.total }} IPs used ({{ item.percentage }}%)
+      loop: "{{ utilization_data }}"
+
+    - name: Generate utilization report
+      copy:
+        content: |
+          ============================================
+          IP UTILIZATION REPORT
+          ============================================
+          Date: {{ ansible_date_time.date }}
+          
+          {% for dept in utilization_data %}
+          {{ dept.name }}
+            Subnet: {{ dept.subnet }}
+            Used: {{ dept.used }}/{{ dept.total }}
+            Utilization: {{ dept.percentage }}%
+            Status: {% if dept.percentage > 80 %}⚠️ WARNING - Almost Full{% elif dept.percentage > 60 %}🟡 Yellow - Planning Needed{% else %}🟢 Green - Available{% endif %}
+          
+          {% endfor %}
+          
+          ============================================
+          RECOMMENDATIONS
+          ============================================
+          {% for dept in utilization_data %}
+          {% if dept.percentage > 80 %}
+          - Expand {{ dept.name }} subnet (currently {{ dept.percentage }}% utilized)
+          {% endif %}
+          {% endfor %}
+        dest: ./reports/ip_utilization_{{ ansible_date_time.date }}.txt

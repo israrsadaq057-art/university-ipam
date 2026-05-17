@@ -1,0 +1,33 @@
+---
+- name: CONFIGURE DNS FOR UNIVERSITY
+  hosts: dns_server
+  vars:
+    zones:
+      - { domain: "university.local", type: "master", file: "db.university.local" }
+      - { domain: "1.1.10.in-addr.arpa", type: "master", file: "db.10.1.1" }
+      - { domain: "1.2.10.in-addr.arpa", type: "master", file: "db.10.2.1" }
+    records:
+      - { name: "admin", ip: "10.1.1.1", type: "A" }
+      - { name: "www", ip: "10.1.1.100", type: "A" }
+      - { name: "mail", ip: "10.1.1.101", type: "A" }
+      - { name: "library", ip: "10.1.3.1", type: "A" }
+  tasks:
+    - name: Generate DNS configuration
+      copy:
+        content: |
+          # DNS Configuration for University
+          # Generated: {{ ansible_date_time.date }}
+          
+          ZONES:
+          {% for zone in zones %}
+          zone "{{ zone.domain }}" {
+            type {{ zone.type }};
+            file "{{ zone.file }}";
+          };
+          {% endfor %}
+          
+          RECORDS:
+          {% for record in records %}
+          {{ record.name }}.university.local. IN {{ record.type }} {{ record.ip }}
+          {% endfor %}
+        dest: ./data/named.conf

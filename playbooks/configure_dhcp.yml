@@ -1,0 +1,35 @@
+---
+- name: CONFIGURE DHCP FOR ALL DEPARTMENTS
+  hosts: dhcp_server
+  vars:
+    dhcp_pools:
+      - { name: "Admin_Pool", subnet: "10.1.1.0", netmask: "255.255.255.0", range_start: "10.1.1.10", range_end: "10.1.1.200", gateway: "10.1.1.1", dns: "10.255.1.20" }
+      - { name: "CS_Pool", subnet: "10.2.1.0", netmask: "255.255.255.0", range_start: "10.2.1.10", range_end: "10.2.1.200", gateway: "10.2.1.1", dns: "10.255.1.20" }
+      - { name: "Physics_Pool", subnet: "10.3.1.0", netmask: "255.255.255.0", range_start: "10.3.1.10", range_end: "10.3.1.200", gateway: "10.3.1.1", dns: "10.255.1.20" }
+      - { name: "Hostel_A_Pool", subnet: "10.4.1.0", netmask: "255.255.254.0", range_start: "10.4.1.10", range_end: "10.4.2.200", gateway: "10.4.1.1", dns: "10.255.1.20" }
+  tasks:
+    - name: Configure DHCP pools
+      debug:
+        msg: "DHCP Pool {{ item.name }} configured for {{ item.subnet }}"
+      loop: "{{ dhcp_pools }}"
+
+    - name: Generate DHCP configuration
+      copy:
+        content: |
+          # DHCP Configuration for University
+          # Generated: {{ ansible_date_time.date }}
+          
+          {% for pool in dhcp_pools %}
+          # ============================================
+          # {{ pool.name }}
+          # ============================================
+          subnet {{ pool.subnet }} netmask {{ pool.netmask }} {
+            range {{ pool.range_start }} {{ pool.range_end }};
+            option routers {{ pool.gateway }};
+            option domain-name-servers {{ pool.dns }};
+            option domain-name "university.local";
+            default-lease-time 86400;
+            max-lease-time 172800;
+          }
+          {% endfor %}
+        dest: ./data/dhcpd.conf

@@ -1,0 +1,27 @@
+============================================
+UNIVERSITY IP ALLOCATION REPORT
+============================================
+Date: 2026-05-17
+
+SUMMARY:
+============================================
+Admin Department:
+  - Network: 10.1.1.0/24
+  - Usable Hosts: 254
+CS Department:
+  - Network: 10.2.1.0/24
+  - Usable Hosts: 254
+Physics Department:
+  - Network: 10.3.1.0/24
+  - Usable Hosts: 254
+Hostel A:
+  - Network: 10.4.1.0/23
+  - Usable Hosts: 510
+Management:
+  - Network: 10.255.1.0/24
+  - Usable Hosts: 254
+
+TOTAL:
+============================================
+Total Subnets: 5
+Total IP Capacity: 0

@@ -1,0 +1,69 @@
+---
+- name: IP ADDRESS CALCULATOR - Calculate subnet information
+  hosts: localhost
+  vars:
+    subnets:
+      - { name: "Admin Department", network: "10.1.1.0", mask: 24 }
+      - { name: "CS Department", network: "10.2.1.0", mask: 24 }
+      - { name: "Physics Department", network: "10.3.1.0", mask: 24 }
+      - { name: "Hostel A", network: "10.4.1.0", mask: 23 }
+      - { name: "Management", network: "10.255.1.0", mask: 24 }
+  tasks:
+    - name: Calculate subnet information
+      set_fact:
+        subnet_info: "{{ subnet_info | default([]) + [calculate_subnet(item)] }}"
+      loop: "{{ subnets }}"
+      vars:
+        calculate_subnet: >-
+          {
+            'name': item.name,
+            'network': item.network,
+            'mask': item.mask,
+            'wildcard': (0xFFFFFFFF << (32 - item.mask)) | ipaddr('wildcard'),
+            'first_ip': (item.network | ipaddr('network')) | ipaddr('1'),
+            'last_ip': (item.network | ipaddr('broadcast')) | ipaddr('-1'),
+            'total_hosts': 2 ** (32 - item.mask) - 2
+          }
+
+    - name: Display IP information
+      debug:
+        msg: |
+          ============================================
+          SUBNET: {{ item.name }}
+          ============================================
+          Network: {{ item.network }}/{{ item.mask }}
+          Wildcard Mask: {{ item.wildcard }}
+          Usable IP Range: {{ item.first_ip }} - {{ item.last_ip }}
+          Total Hosts: {{ item.total_hosts }}
+      loop: "{{ subnet_info }}"
+
+    - name: Generate IP report
+      copy:
+        content: |
+          ============================================
+          UNIVERSITY IP ADDRESS MANAGEMENT REPORT
+          ============================================
+          Date: {{ ansible_date_time.date }}
+          
+          {% for subnet in subnet_info %}
+          ============================================
+          {{ subnet.name }}
+          ============================================
+          Network: {{ subnet.network }}/{{ subnet.mask }}
+          Wildcard: {{ subnet.wildcard }}
+          First IP: {{ subnet.first_ip }}
+          Last IP: {{ subnet.last_ip }}
+          Total Usable Hosts: {{ subnet.total_hosts }}
+          
+          {% endfor %}
+          
+          ============================================
+          SUMMARY
+          ============================================
+          Total Subnets: {{ subnet_info | length }}
+          Total IPs Allocated: {% set total = 0 %}{% for s in subnet_info %}{% set total = total + s.total_hosts %}{% endfor %}{{ total }}
+        dest: ./reports/ip_allocation_{{ ansible_date_time.date }}.txt
+
+    - name: Show report location
+      debug:
+        msg: "IP report saved to ./reports/ip_allocation_{{ ansible_date_time.date }}.txt"

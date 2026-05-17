@@ -1,0 +1,66 @@
+---
+- name: SIMPLE IP CALCULATOR
+  hosts: localhost
+  vars:
+    subnets:
+      - name: "Admin Department"
+        network: "10.1.1.0"
+        mask: 24
+      - name: "CS Department"
+        network: "10.2.1.0"
+        mask: 24
+      - name: "Physics Department"
+        network: "10.3.1.0"
+        mask: 24
+      - name: "Hostel A"
+        network: "10.4.1.0"
+        mask: 23
+      - name: "Management"
+        network: "10.255.1.0"
+        mask: 24
+
+  tasks:
+    - name: Create reports directory
+      file:
+        path: ./reports
+        state: directory
+
+    - name: Calculate IP information for each subnet
+      set_fact:
+        subnet_results: "{{ subnet_results | default([]) + [{'name': item.name, 'network': item.network, 'mask': item.mask, 'hosts': (2 ** (32 - item.mask)) - 2}] }}"
+      loop: "{{ subnets }}"
+
+    - name: Display subnet information
+      debug:
+        msg: |
+          ============================================
+          Subnet: {{ item.name }}
+          Network: {{ item.network }}/{{ item.mask }}
+          Usable Hosts: {{ item.hosts }}
+      loop: "{{ subnet_results }}"
+
+    - name: Generate IP allocation report
+      copy:
+        content: |
+          ============================================
+          UNIVERSITY IP ALLOCATION REPORT
+          ============================================
+          Date: {{ ansible_date_time.date }}
+          
+          SUMMARY:
+          ============================================
+          {% for subnet in subnet_results %}
+          {{ subnet.name }}:
+            - Network: {{ subnet.network }}/{{ subnet.mask }}
+            - Usable Hosts: {{ subnet.hosts }}
+          {% endfor %}
+          
+          TOTAL:
+          ============================================
+          Total Subnets: {{ subnet_results | length }}
+          Total IP Capacity: {% set total = 0 %}{% for s in subnet_results %}{% set total = total + s.hosts %}{% endfor %}{{ total }}
+        dest: "./reports/ip_allocation_{{ ansible_date_time.date }}.txt"
+
+    - name: Show completion message
+      debug:
+        msg: "✅ IP Calculator complete! Report saved to reports/ip_allocation_{{ ansible_date_time.date }}.txt"
